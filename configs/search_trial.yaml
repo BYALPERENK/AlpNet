@@ -1,0 +1,21 @@
+# End-to-end trial of the GA: small generations, short recipes, both
+# phases (3 epochs, then 4 with the best networks trained again), rule epochs scaled down so that rules
+# can trigger. Generation 0 is trained by the GA itself, with 3 and 4 epochs.
+n0: 6
+k: 3
+c: 3
+m: 2
+seed: 0
+phases:
+  - epochs: 3
+    generations: 2
+    rules:
+      not_learning: {epoch: 3}
+      percentile: {2: 0.2}
+  - epochs: 4
+    generations: 1
+    rules:
+      not_learning: {epoch: 3}
+      floor: {4: 0.35}
+      percentile: {2: 0.2, 3: 0.3}
+      reach_elite: {check: [2, 3], q: 0.9}

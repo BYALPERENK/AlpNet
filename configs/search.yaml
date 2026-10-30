@@ -1,0 +1,39 @@
+# The GA (README, "Making new networks"). Generation 0: 100 random networks trained with every phase's epoch count
+# (train_random.py, same --seed, imported with run_search.py --gen0); selection starts with the first
+# phase's scores. The phases follow one another (README, "Saving compute").
+n0: 100          # generation 0: completed random candidates
+k: 20            # elites
+c: 30            # crossover children per generation
+p1: 0.45         # per gene: parent 1 / parent 2 / random value (pm = 1 - p1 - p2 = 0.1)
+p2: 0.45
+m: 20            # elites with a mutation child
+qm: 0.1          # per-gene change probability of a mutation child
+age_max: 5       # A
+death_rate: 0.3  # DR
+seed: 0          # the GA's own randomness
+# 2 x 100 + 20 x 50 children + the best networks trained again at the switch (~20-40) ~ 1220 trainings
+
+# Per phase: epochs, how many generations, stop rules (alpnet/train/stopping.py; a rule left out or null
+# is off), calibration (the calibrate_rules.py report the thresholds come from; null: run_search.py warns).
+# A and B read generation 0's curves at the phase's epoch count. The thresholds below are placeholders
+# from the old search space (decoder 2): recalibrate with scripts/calibrate_rules.py on the new
+# generation 0 (20 epochs for phase 1, 40 for phase 2) before the search.
+phases:
+  - epochs: 20
+    generations: 10     # generations 1-10
+    calibration: null
+    rules:
+      not_learning: {epoch: 3}
+      floor: {5: 0.60}                        # D
+      percentile: {2: 0.2, 5: 0.3, 10: 0.5}   # A
+      reach_elite: {check: [2, 5, 10, 15], q: 1.0}  # B
+      patience: {patience: 2, start: 15}
+  - epochs: 40
+    generations: 10     # generations 11-20
+    calibration: null
+    rules:
+      not_learning: {epoch: 3}
+      floor: {10: 0.50}
+      percentile: {5: 0.2, 10: 0.3, 20: 0.5}
+      reach_elite: {check: [10, 20, 30], q: 1.0}
+      patience: {patience: 5, start: 30}

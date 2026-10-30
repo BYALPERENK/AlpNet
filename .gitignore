@@ -1,0 +1,21 @@
+# datasets (rebuilt by scripts/) and experiment outputs
+/data/
+/runs/
+
+# python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# misc
+*.part

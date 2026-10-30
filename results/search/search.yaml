@@ -1,0 +1,49 @@
+# search.yaml with the stop rules calibrated on generation 0 (scripts/run_pipeline.py)
+n0: 100
+k: 20
+c: 30
+p1: 0.45
+p2: 0.45
+m: 20
+qm: 0.1
+age_max: 5
+death_rate: 0.3
+seed: 0
+phases:
+- epochs: 20
+  generations: 10
+  calibration: runs\main_20261024\gen0_20ep\calibration.md
+  rules:
+    not_learning:
+      epoch: 3
+    floor: null
+    percentile:
+      10: 0.2
+    reach_elite:
+      check:
+      - 10
+      - 15
+      q: 1.0
+    patience:
+      patience: 2
+      start: 15
+- epochs: 40
+  generations: 10
+  calibration: runs\main_20261024\gen0_40ep\calibration.md
+  rules:
+    not_learning:
+      epoch: 3
+    floor:
+      10: 0.5
+    percentile:
+      20: 0.2
+    reach_elite:
+      check:
+      - 5
+      - 10
+      - 20
+      - 30
+      q: 1.0
+    patience:
+      patience: 5
+      start: 30
