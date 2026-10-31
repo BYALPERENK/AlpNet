@@ -5,11 +5,13 @@ convolutional neural network (CNN) by hand, a program designs it. It writes each
 of choices (how many layers, which blocks, how wide, which kernel sizes…), trains it on an image
 classification task and scores it. A **genetic algorithm** then evolves these lists: the best networks
 are kept, new ones are made by mixing and slightly changing them, and over many generations the networks
-get better. The goal is a network that is both accurate and small. Everything is written from scratch.
+get better. The goal is a network that is both accurate and small. The search, the search space and the
+training pipeline are written from scratch; the ResNet-18 and MobileViTv2 baselines come from torchvision
+and timm.
 
 In detail: the search is a **(μ + λ) genetic algorithm with ageing**. It uses truncation selection,
 uniform crossover and random-resetting mutation. A survivor is also removed at random once it is older
-than a maximum lifespan, an idea taken from regularized (aging) evolution. The fitness is val macro-F1
+than an age threshold, an idea taken from regularized (aging) evolution. The fitness is val macro-F1
 minus a penalty on parameters and MACs. The task is `alpnet15_v1`, a 15-class, 1×64×64 grayscale dataset
 built for this project (medical tissue, animals, vehicles and scenes). The repository contains all of
 it: the dataset pipeline, the block library, the genotype and decoder, the training loop, the early
@@ -45,7 +47,7 @@ scores, mean ± std over seeds (baselines: 3 seeds). Full table with per-group s
 | alpnet_e | 4th fitness | 0.30M | 0.18G | 4.1 min | 87.82 | 86.08 ± 0.13 | 77.76 | 76.38 |
 | alpnet_b | 2nd fitness | 0.30M | 0.18G | 3.6 min | 87.75 | 86.07 ± 0.11 | 78.20 | 76.26 |
 | alpnet_f | S (≤ 0.1 GMACs) | 0.45M | **0.06G** | 3.5 min | 86.87 | 85.19 ± 0.19 | 76.21 | 74.78 |
-| B1 LeNet | baseline | 0.34M | 0.00G | 0.5 min | 75.76 | 74.22 ± 1.24 | 58.70 | 60.69 |
+| B1 LeNet | baseline | 0.34M | 0.0025G | 0.5 min | 75.76 | 74.22 ± 1.24 | 58.70 | 60.69 |
 
 **B1–B4 are the baselines:** reference networks, trained with the same recipe, that the searched
 networks are compared against. Their numbers were assigned before any training, by the role each was
@@ -70,12 +72,14 @@ What the numbers say:
 - **The cost penalty has a price.** The 2nd and 4th by fitness (0.30M parameters) are 0.4 points below
   PlainCNN: the fitness traded accuracy for size, as designed (`a = b = 0.3`, see
   [the fitness function](#6-choosing-the-best-the-fitness-function)).
-- **MACs are a poor proxy for time.** Every search network trains slower than ResNet-18 despite 4–7×
+- **MACs are a poor proxy for time.** Every search network trains slower than ResNet-18 despite 4–37×
   fewer MACs (depthwise convolutions, concatenation, SE). Time was deliberately left out of the fitness
   (it cannot be measured reliably under load), and it shows.
 - **Little winner's curse from seed luck.** Retrained with 5 seeds, the chosen networks lose on average
-  0.14 points of val F1 against the single training they were chosen by (at most 0.46). A single
-  training's test score varies by about ±1 point with the seed. The val–test gap is ~1.6–1.9 points for
+  0.14 points of val F1 against the single training they were chosen by (at most 0.46). Across the 5
+  seeds, a final network's test macro-F1 spans 0.3–0.6 points (std 0.11–0.27). The retraining also
+  switches from the fused AdamW kernel of the search to the standard one (the same algorithm, so only
+  floating-point differences). The val–test gap is ~1.6–1.9 points for
   the search networks vs ~1.4 for ResNet-18 and MobileViT; most of it is the domain gap of the medical
   group (val and train come from the same slides, test from other patients), the extra 0.2–0.4 may be the
   architecture fitting the val samples, which this design cannot separate.
@@ -162,8 +166,10 @@ up far apart:
 
 **How many images.** 2000 train / 500 val / 500 test per class: 30,000 / 7,500 / 7,500 in total, the
 same for every class (balanced). The test set decides how small a difference can be trusted: with 7,500
-test images the standard error of an accuracy near 87% is about ±0.4 points, so differences well below
-1 point are noise. 500 test images per class was a hard requirement, and it ruled sources out.
+test images the standard error of an accuracy near 87% is about ±0.4 points. That is the uncertainty of
+one score, not a threshold for a difference between two networks: both are measured on the same images,
+and the seed adds its own spread. No paired test was run, so small differences in the tables are not a
+ranking. 500 test images per class was a hard requirement, and it ruled sources out.
 
 **Sources considered and dropped.** EuroSAT (only 64×64, no margin for the crop below; neighbouring
 satellite tiles are near-duplicates), Intel Image Classification and Animals-10 (too few images per class
@@ -241,7 +247,8 @@ in [`results/baselines/summary.md`](results/baselines/summary.md)):
 ### 4. The search space: blocks and genes
 
 **A network as a list of genes.** A genotype is a flat dictionary of **76 genes**: a stem, **five slots
-at fixed resolutions (64, 32, 16, 8, 4)** and a head. Each slot is a stage that can be switched on or
+at fixed downsampling levels (nominal resolutions 64, 32, 16, 8, 4; `valid` padding can shrink a map
+by a few pixels)** and a head. Each slot is a stage that can be switched on or
 off; every block in a stage shares the stage's genes (the first block does the downsampling). Genes per
 block instead of per stage would multiply the gene count by ~5 and make crossover and mutation little
 better than random search.
@@ -336,9 +343,10 @@ AlpNet keeps the generations of a classic GA and borrows only the ageing idea:
   that is over budget, is rejected and drawn again (at most 20 tries, then a random genotype), so every
   generation trains 50 new networks.
 - **Ageing:** an individual's age is the number of generations it has survived; offspring start at 0.
-  An elite older than the **maximum lifespan κ = 5** (as in the (μ, κ, λ)-ES of Schwefel & Rudolph,
-  1995) is removed with probability 0.3 per generation, the fittest included (**stochastic ageing**, cf.
-  Oliveto & Sudholt, 2014). If it stays in the top 20, it lives 5 + 1/0.3 ≈ 8 generations on average.
+  An elite older than the **age threshold κ = 5** (the maximum lifespan of the (μ, κ, λ)-ES of Schwefel &
+  Rudolph, 1995, made soft here: no hard limit) is removed with probability 0.3 per generation, the
+  fittest included (**stochastic ageing**, cf. Oliveto & Sudholt, 2014). If it stays in the top 20, it
+  lives 5 + 1/0.3 ≈ 8 generations on average.
   No result is lost: the history keeps every evaluation.
 - **Generation 0:** 100 random networks (every gene uniform among its options, within budget), trained
   fully without any early stopping.
@@ -378,14 +386,15 @@ fitness = val macro-F1 − 0.3·log2(params / 1M) − 0.3·log2(MACs / 0.1G)
   concatenation (see the results).
 - **Recomputable:** F1, parameters and MACs are stored for every network, so another `a`, `b` can be
   tried later and the Pareto front drawn without retraining.
-- **The test set is never read during the search.** Each candidate's test score was written only to its
-  own sealed file and opened after the search ended; selection, early stopping and the choice of the
-  final networks use val only.
+- **Test scores never steer the search.** Each candidate is tested once, at the end of its training, and
+  the score was written only to its own sealed file, opened after the search ended; selection, early
+  stopping and the choice of the final networks use val only.
 
 ### 7. Hyperparameters
 
 The training recipe is **fixed and the same for every network** (baselines included): learning rate and
-weight decay are not genes, so fitness differences come from the architecture alone.
+weight decay are not genes, so fitness differences come from the architecture alone. Two exceptions:
+the heads (each baseline keeps its standard head) and the AdamW kernel (fused in the search, step 8).
 
 | Training (all networks) | Value |
 |---|---|
@@ -396,7 +405,7 @@ weight decay are not genes, so fitness differences come from the architecture al
 | loss | cross-entropy with label smoothing 0.1 |
 | precision / layout | bf16 autocast, channels_last |
 | augmentation | random 64×64 crop from 80×80, horizontal flip p = 0.5 |
-| head dropout | 0.3 |
+| head dropout | 0.3 (search networks, PlainCNN); none in LeNet and ResNet-18, 0 in MobileViTv2 |
 | checkpoint | the epoch with the best val macro-F1 |
 | seed | the same for every search candidate: same initialization seed and the same data order |
 
@@ -407,7 +416,7 @@ weight decay are not genes, so fitness differences come from the architecture al
 | offspring λ | 30 crossover (`C`) + 20 mutation (`M`) |
 | crossover `p1 / p2 / pm` | 0.45 / 0.45 / 0.1 per gene |
 | mutation rate `qm` | 0.1 per gene |
-| maximum lifespan κ (`A`) / death probability (`DR`) | 5 generations / 0.3 |
+| age threshold κ (`A`) / death probability (`DR`) | 5 generations / 0.3 |
 | generations | 20: 1–10 at 20 epochs, 11–20 at 40 epochs |
 | fitness `a`, `b` | 0.3, 0.3 |
 | budget | 3M parameters, 1 GMACs, 20 GB training memory |
@@ -472,8 +481,9 @@ of them one after another would have taken ~80 hours. Most of what follows exist
 
 ## Limitations
 - One search run with one GA seed; the result depends on the GA's luck too.
-- Candidates were trained with one seed during the search; differences below ~1 point between single
-  trainings are noise (the final networks were retrained with 5 seeds for this reason).
+- Candidates were trained with one seed during the search, so small differences between two candidates
+  are not a ranking (the final networks were retrained with 5 seeds for this reason). No paired test or
+  confidence interval for the differences between the final networks was computed.
 - **No comparison runs.** A same-budget comparison with regularized evolution, random search or Optuna
   was planned only if budget remained; it was not run. The claims are about this search, not about this
   GA being better than the alternatives.
@@ -485,7 +495,8 @@ of them one after another would have taken ~80 hours. Most of what follows exist
 - One block type per resolution (the price of the slots), and all blocks of a stage share their genes.
 - MACs stand in for time in the fitness; the found networks train slower than their MACs suggest.
 - The test set was used in the baseline step (choosing the checkpoint metric, freezing the dataset), so
-  one cannot say it was used in no design decision; the search itself never read it.
+  one cannot say it was used in no design decision; in the search its scores were sealed and steered
+  nothing.
 - Group = source in this dataset: a model could use the source's signature to tell the groups apart.
   Cross-group errors are low (~2.5%) and almost all vehicle↔scene, but this does not prove there is no
   shortcut.
@@ -493,8 +504,10 @@ of them one after another would have taken ~80 hours. Most of what follows exist
 
 ## How to run
 
-Requirements: Python 3.11, a CUDA GPU (developed on an RTX 5090, 32 GB; the search caps PyTorch at
-20 GB), ~50 GB of disk for the raw data.
+Requirements: Python 3.11, a CUDA GPU with bf16 (developed on an RTX 5090, 32 GB; the search caps
+PyTorch at 20 GB: on a smaller GPU pass `--mem-cap` with less to `run_pipeline.py`, which makes it
+another search, as the networks that run out of memory change), ~50 GB of disk for the raw data. A
+class short of its image count stops the dataset build (a failed download, for example).
 
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu132
@@ -534,9 +547,10 @@ python scripts/analyze_test.py runs/main/search
 ```
 
 **5. Final evaluation:** retrain networks chosen by val (their hashes from the analysis report) with 5
-seeds and compare them with the baselines:
+seeds and compare them with the baselines (`--baselines`: the date prefix of their run folders):
 ```bash
-python scripts/train_final.py runs/main/search <hash> <hash> ... --seeds 0 1 2 3 4 --out runs/final --chart alpnet_a alpnet_f
+python scripts/train_final.py runs/main/search <hash> <hash> ... --seeds 0 1 2 3 4 --baselines <prefix> --out runs/final --chart alpnet_a alpnet_f
+python scripts/export_results.py runs/main runs/final --baselines <prefix>   # the copy in results/
 ```
 To build one of the final networks in your own code:
 ```python
@@ -546,8 +560,9 @@ net = json.load(open("results/final/networks.json"))[0]
 model = decode(net["genotype"]).build()   # alpnet_a, randomly initialized
 ```
 
-Tests: `pip install pytest`, then `python -m pytest tests` (some tests need a GPU; every test file also
-runs directly with `python tests/test_<name>.py`).
+Tests: `pip install pytest`, then `python -m pytest tests`. Five tests need a CUDA GPU (four of them also
+the built dataset) and are reported as skipped without it; every test file also runs directly with
+`python tests/test_<name>.py`.
 
 ### Repository layout
 ```
@@ -561,7 +576,10 @@ tests/
 results/          the reports and charts of the main run (search, generation 0, baselines, final)
 ```
 `results/search/results.jsonl.gz` holds every evaluation of the main run (genotype, canonical form, cost,
-val curve and scores; no test scores), `generations.jsonl` the per-generation diagnostics.
+val curve and scores), `test_sealed.jsonl.gz` their sealed test scores, `generations.jsonl` the
+per-generation diagnostics and `ga_state.json` the last population; `results/final/runs.jsonl.gz` holds
+every final and baseline run per seed. The analyses run on this copy without the raw data, e.g.
+`python scripts/analyze_search.py results/search --epochs 40 --out <dir>`.
 
 ## References
 

@@ -2,18 +2,20 @@
 
 The networks are given by hash (chosen by val only, from the search's results.jsonl); each is decoded from
 its genotype and trained like train_baseline.py: trainer.Recipe() (40 epochs, test every epoch, checkpoint =
-best val macro-F1), seeds 0 1 2. A run whose summary.json exists is skipped, so the same command resumes.
+best val macro-F1), seeds 0 1 2. A finished run of the same network, seed, dataset, decoder and recipe is
+skipped, so the same command resumes; a summary.json of another run in its folder stops the script.
 At the end summary.md in --out: the networks next to the baselines (summarize_runs.section, mean ± std over
 seeds, test scores at the best val macro-F1 epoch), and each network's search scores (the one training it
 was chosen by, its sealed test included) vs the retrained ones: the optimism of picking by val; networks.json:
 each network's genotype and built form (decoder.decode(genotype).build() makes it again); test_f1_vs_cost.png
 (and test_f1_vs_cost_selected.png with --chart).
 
-    python scripts/train_final.py runs/main_20261024/search f26817817324fcc9 c00c957e623f0814 --out runs/final_X
+    python scripts/train_final.py runs/main_20261024/search f26817817324fcc9 c00c957e623f0814 --baselines 20261021-1647         --out runs/final_X
 """
 
 import argparse
 import ctypes
+import dataclasses
 import json
 import os
 import sys
@@ -28,6 +30,7 @@ from alpnet.data.loader import load_splits  # noqa: E402
 from alpnet.models.decoder import DECODER_VERSION, decode  # noqa: E402
 from alpnet.search.ga import read_jsonl  # noqa: E402
 from alpnet.train.trainer import Recipe, seed_everything, train  # noqa: E402
+from analyze_test import sealed_tests  # noqa: E402
 from summarize_runs import ms, section  # noqa: E402
 
 DATASET = "alpnet15_v1"
@@ -40,7 +43,7 @@ def main():
     ap.add_argument("hashes", nargs="+", help="networks to retrain, named alpnet_a, alpnet_b, ... in this order")
     ap.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2])
     ap.add_argument("--out", type=Path, default=ROOT / "runs" / f"final_{time.strftime('%Y%m%d-%H%M')}")
-    ap.add_argument("--baselines", default="20261021-1647", help="folder prefix of the baseline runs in runs/")
+    ap.add_argument("--baselines", required=True, help="folder prefix of the baseline runs in runs/ (their date stamp)")
     ap.add_argument("--chart", nargs="+", metavar="NAME", help="also a chart with only these search networks "
                     "(e.g. alpnet_a alpnet_f): test_f1_vs_cost_selected.png")
     args = ap.parse_args()
@@ -64,6 +67,13 @@ def main():
         for seed in args.seeds:
             run_dir = args.out / f"{name}_s{seed}"
             if (run_dir / "summary.json").exists():
+                s = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+                want = {"status": "completed", "hash": ph.hash, "seed": seed, "dataset": splits["train"].dataset,
+                        "decoder_version": DECODER_VERSION, "recipe": dataclasses.asdict(recipe)}
+                bad = {k: s.get(k) for k, v in want.items() if s.get(k) != v}
+                if bad:
+                    raise SystemExit(f"{run_dir}: summary.json is not this run ({name} = {ph.hash}, seed {seed}): "
+                                     f"{bad}; use another --out")
                 print(f"{run_dir.name}: done, skipped", flush=True)
                 continue
             run_dir.mkdir(parents=True, exist_ok=True)
@@ -88,6 +98,8 @@ def main():
         s = json.loads(p.read_text())
         if "checkpoints" in s:
             by_model[s["model"]].append(s)
+    if not by_model:
+        raise SystemExit(f"no baseline runs runs/{args.baselines}*/summary.json")
     for name, _, _ in nets:
         by_model[name] = [json.loads((args.out / f"{name}_s{seed}" / "summary.json").read_text()) for seed in args.seeds]
     lines = [f"# Search networks retrained ({len(args.seeds)} seeds, the baselines' recipe) vs baselines", ""]
@@ -100,9 +112,9 @@ def main():
               "sealed during the search. Retrained = mean ± std over the seeds above. Δ = retrained − search.", "",
               "| network | search val F1 | retrained val F1 | Δ val | search test F1 | retrained test F1 | Δ test |",
               "|---|---|---|---|---|---|---|"]
+    tests = sealed_tests(args.search, [r for _, r, _ in nets])
     for name, r, _ in nets:
-        sealed = json.loads((ROOT / r["run_dir"] / "test_sealed.json").read_text(encoding="utf-8"))
-        sv, st = 100 * r["val"]["macro_f1"], 100 * sealed["checkpoints"]["macro_f1"]["test"]["macro_f1"]
+        sv, st = 100 * r["val"]["macro_f1"], 100 * tests[r["run_dir"]]["macro_f1"]
         runs = by_model[name]
         rv = [100 * s["checkpoints"]["macro_f1"]["val"]["macro_f1"] for s in runs]
         rt = [100 * s["checkpoints"]["macro_f1"]["test"]["macro_f1"] for s in runs]
@@ -146,7 +158,8 @@ def chart(by_model: dict, path: Path, only: list | None = None):
         ax.set_xscale("log")
         style(ax, title, xlabel, "test macro-F1 (%, mean ± std)")
     axes[0].errorbar([], [], fmt="o", color=BLUE, label=f"search networks ({len(next(r for m, r in by_model.items() if m.startswith('alpnet_')))} seeds)")
-    axes[0].errorbar([], [], fmt="o", color=MUTED, label="baselines (3 seeds)")
+    n_base = sorted({len(r) for m, r in by_model.items() if m in names})
+    axes[0].errorbar([], [], fmt="o", color=MUTED, label=f"baselines ({'/'.join(map(str, n_base))} seeds)")
     axes[0].legend(frameon=False, fontsize=8, loc="lower right")
     fig.tight_layout()
     fig.savefig(path, dpi=150, facecolor=SURFACE)

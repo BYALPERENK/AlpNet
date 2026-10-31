@@ -46,6 +46,7 @@ The training is a function passed in (`evaluate`), so tests can use a fake one. 
 GPU state is raised by it (the process stops); MAX_ERRORS errors in a row stop the search too.
 """
 
+import gzip
 import json
 import math
 import os
@@ -93,9 +94,13 @@ def append_jsonl(path: Path, rec: dict):
 def read_jsonl(path: Path, repair: bool = True) -> list[dict]:
     """The records of a JSONL file only one process appends to. A last line cut by a crash mid-write is
     left out, and with `repair` removed from the file (that candidate is trained again; a reader running
-    next to the writer passes repair=False); a broken line elsewhere is an error."""
+    next to the writer passes repair=False); a broken line elsewhere is an error. A reader also reads a
+    published copy, <path>.gz (results/), when the file itself is not there."""
     if not path.exists():
-        return []
+        gz = path.with_name(path.name + ".gz")
+        if repair or not gz.exists():
+            return []
+        return [json.loads(line) for line in gzip.decompress(gz.read_bytes()).decode("utf-8").splitlines()]
     text = path.read_text(encoding="utf-8")
     lines, recs = text.splitlines(), []
     for i, line in enumerate(lines):

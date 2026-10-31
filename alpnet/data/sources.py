@@ -185,6 +185,8 @@ def extract_places() -> Path:
             for p, name in prefixes.items():
                 if m.isfile() and m.name.startswith(p):
                     dest = out / name / m.name[len(p):]
+                    if not dest.resolve().is_relative_to((out / name).resolve()):  # "../" in a member name
+                        raise ValueError(f"{tar_path.name}: member {m.name!r} points outside {out / name}")
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_bytes(t.extractfile(m).read())
     done.write_text("ok")

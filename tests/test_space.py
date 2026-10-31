@@ -54,6 +54,7 @@ def test_complete():
     g = complete({"s64.active": True, "s64.width": 32, "s32.active": True, "s32.depth": 2})
     validate(g)
     assert slot_genes(g, 32)["depth"] == 2 and slot_genes(g, 16)["active"] is False
+    assert list(validate(dict(sorted(g.items())))) == list(GENES)  # key order (a JSON round trip) does not matter
     try:
         complete({"s2.active": True})
     except ValueError:

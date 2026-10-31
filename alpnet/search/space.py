@@ -60,12 +60,17 @@ NEUTRAL = {
 }
 
 
-def validate(g: dict):
-    if list(g) != list(GENES):
-        raise ValueError(f"genotype keys differ from GENES: {set(g) ^ set(GENES)}")
+def validate(g: dict) -> dict:
+    """The genotype with its keys in GENES order (a JSON round trip may sort them); an unknown or missing gene
+    or a value outside its options is an error."""
+    if set(g) != set(GENES):
+        raise ValueError(f"genotype genes differ from GENES: missing {sorted(set(GENES) - set(g))}, "
+                         f"unknown {sorted(set(g) - set(GENES))}")
+    g = {k: g[k] for k in GENES}
     for k, v in g.items():
         if v not in GENES[k]:
             raise ValueError(f"{k}={v!r} is not one of {GENES[k]}")
+    return g
 
 
 def complete(partial: dict) -> dict:

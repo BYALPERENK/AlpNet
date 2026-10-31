@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from alpnet.data.loader import load_splits  # noqa: E402
 from alpnet.search.ga import GAConfig, Search  # noqa: E402
 from alpnet.train.trainer import SEARCH_RECIPE  # noqa: E402
-from scripts.train_random import DATASET, MEM_CAP, run_one, search_key  # noqa: E402
+from scripts.train_random import DATASET, MEM_CAP, run_one, search_key, set_mem_cap  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,7 +57,7 @@ def main():
         log_f.write(line + "\n")
         log_f.flush()
 
-    torch.cuda.set_per_process_memory_fraction(args.mem_cap * 1e9 / torch.cuda.get_device_properties(0).total_memory)
+    set_mem_cap(args.mem_cap)
     splits = load_splits(DATASET)
     def evaluate(idx, g, ph, rules, gen_dir, epochs):
         return run_one(idx, g, ph, splits, dataclasses.replace(SEARCH_RECIPE, epochs=epochs), gen_dir, rules,

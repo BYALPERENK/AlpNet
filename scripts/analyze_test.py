@@ -3,8 +3,9 @@
 Run only after the search: from here on no choice may look at these scores (the final networks are picked by
 val, scripts/train_final.py). Per epoch count: Spearman of val and test F1 over all completed networks and
 over the best TOP by val fitness, the median test − val gap, the best 20 by val fitness with their test
-scores (one training each, seed 0, so about ±1 point of seed noise) and the val F1 / MACs Pareto front.
-Writes test_after_search.md into --out (default <search>/analysis).
+scores (one training each, seed 0: the seed noise of a single score is in them) and the val F1 / MACs Pareto front.
+Writes test_after_search.md into --out (default <search>/analysis). Also runs on the published copy
+(results/search: the test scores in test_sealed.jsonl.gz, written by export_results.py).
 
     python scripts/analyze_test.py runs/main_20261024/search --out results/search
 """
@@ -26,6 +27,17 @@ from analyze_search import f1, pareto  # noqa: E402
 TOP = 30
 
 
+def sealed_tests(search: Path, recs: list[dict]) -> dict:
+    """run_dir -> the sealed test scores at the best val macro-F1 epoch: from each run's test_sealed.json, or
+    from the published copy <search>/test_sealed.jsonl(.gz)."""
+    out = {s["run_dir"]: s["test"] for s in read_jsonl(search / "test_sealed.jsonl", repair=False)}
+    for r in recs:
+        p = ROOT / r["run_dir"] / "test_sealed.json"
+        if p.exists():
+            out[r["run_dir"]] = json.loads(p.read_text(encoding="utf-8"))["checkpoints"]["macro_f1"]["test"]
+    return out
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
@@ -36,19 +48,21 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     ok = []
-    for r in read_jsonl(args.search / "results.jsonl", repair=False):
-        sealed = ROOT / r["run_dir"] / "test_sealed.json"
-        if r["status"] != "completed" or r.get("fitness") is None or not sealed.exists():
+    recs = [r for r in read_jsonl(args.search / "results.jsonl", repair=False)
+            if r["status"] == "completed" and r.get("fitness") is not None]
+    tests = sealed_tests(args.search, recs)
+    for r in recs:
+        if r["run_dir"] not in tests:
             continue
-        r["t"] = json.loads(sealed.read_text(encoding="utf-8"))["checkpoints"]["macro_f1"]["test"]
+        r["t"] = tests[r["run_dir"]]
         r["tf"] = 100 * r["t"]["macro_f1"]
         ok.append(r)
     groups = list(ok[0]["t"]["group_f1"])
 
     L = [f"# Val vs test after the search ({args.search})", "",
          "The test scores were sealed during the search (one training per network, seed 0, the search recipe; "
-         "the checkpoint is the best val macro-F1 epoch). Nothing was chosen by them. Differences below ~1 point "
-         "between single trainings are seed noise.", ""]
+         "the checkpoint is the best val macro-F1 epoch). Nothing was chosen by them. Each score is one training, "
+         "so small differences between two networks are not a ranking.", ""]
     for E in sorted({r["epochs"] for r in ok}):
         a = sorted((r for r in ok if r["epochs"] == E), key=lambda r: -r["fitness"])
         v, t = np.array([f1(r) for r in a]), np.array([r["tf"] for r in a])

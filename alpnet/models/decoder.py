@@ -81,7 +81,7 @@ def _stage_res(st: dict, h: int, padding: str, fold: bool) -> int:
 
 
 def canonicalize(g: dict) -> tuple[dict, list[str]]:
-    validate(g)
+    g = validate(g)
     repairs = []
     active = [r for r in SLOTS if g[f"s{r}.active"]]
     if not active:

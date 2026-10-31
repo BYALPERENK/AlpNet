@@ -3,6 +3,7 @@
     python tests/test_ga.py
 """
 
+import gzip
 import json
 import random
 import sys
@@ -335,6 +336,9 @@ def test_read_jsonl():
         with open(p, "a", encoding="utf-8") as f:
             f.write('{"a": 4}\n')
         assert read_jsonl(p) == [{"a": 1}, {"a": 2}, {"a": 4}]
+        gz = Path(d) / "y.jsonl"  # only a published copy, y.jsonl.gz: readers read it, the writer does not
+        gz.with_name("y.jsonl.gz").write_bytes(gzip.compress(b'{"a": 1}\n{"a": 2}\n'))
+        assert read_jsonl(gz, repair=False) == [{"a": 1}, {"a": 2}] and read_jsonl(gz) == []
         p.write_text('{"a": 1}\n{"a\n{"a": 3}\n', encoding="utf-8")
         try:
             read_jsonl(p)

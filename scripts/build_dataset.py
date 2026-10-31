@@ -7,7 +7,8 @@ Per group: walk each split's candidates in their seeded order, preprocess (gray,
 80x80, no upscaling), drop rejects and near-duplicates (pHash, Hamming <= DUP_DIST, checked
 against everything already kept in the group, train first), keep the first N per class.
 Outputs in data/processed/: <name>.npz, <name>_manifest.csv, <name>_metadata.json,
-<name>_preview/ (per-class grids, class means).
+<name>_preview/ (per-class grids, class means). A class short of NEED in any split stops the build before
+anything is written (--allow-shortfall writes it anyway, under another --name).
 """
 
 import argparse
@@ -122,7 +123,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--groups", nargs="+", default=list(ADAPTERS), choices=list(ADAPTERS))
     ap.add_argument("--name", default="alpnet15_v1")
+    ap.add_argument("--allow-shortfall", action="store_true", help="write the dataset even if a class is short")
     args = ap.parse_args()
+    if args.allow_shortfall and args.name == "alpnet15_v1":
+        ap.error("a short dataset is not alpnet15_v1: give it another --name")
 
     out = ROOT / "data" / "processed"
     out.mkdir(parents=True, exist_ok=True)
@@ -144,6 +148,11 @@ def main() -> None:
             reports[g] = rep
             classes += rep["classes"]
 
+    short = {g: r["shortfall"] for g, r in reports.items() if r["shortfall"]}
+    if short and not args.allow_shortfall:
+        log("SHORTFALL: " + json.dumps(short))
+        sys.exit("classes short of the target counts, nothing written (missing downloads? see the log)")
+
     man = pd.DataFrame(rows)
     man["label"] = man.cls.map({c: i for i, c in enumerate(classes)})
     man["source"] = man.group.map({g: i for i, g in enumerate(args.groups)})
@@ -155,8 +164,13 @@ def main() -> None:
         arrays[f"x_{split}"] = x_all[m.index.to_numpy()]
         arrays[f"y_{split}"] = m.label.to_numpy(np.int64)
         arrays[f"src_{split}"] = m.source.to_numpy(np.int64)
-    npz_path = out / f"{args.name}.npz"
-    np.savez(npz_path, **arrays)
+    # the metadata (whose content hash is the dataset id of the search cache) goes first and comes back last:
+    # a rebuild cut halfway leaves no metadata, so new arrays never pass under the old id
+    npz_path, meta_path = out / f"{args.name}.npz", out / f"{args.name}_metadata.json"
+    meta_path.unlink(missing_ok=True)
+    with open(npz_path.with_suffix(".npz.part"), "wb") as f:
+        np.savez(f, **arrays)
+    npz_path.with_suffix(".npz.part").replace(npz_path)
     man.to_csv(out / f"{args.name}_manifest.csv", index=False)
 
     tr = arrays["x_train"].astype(np.float64) / 255.0
@@ -177,10 +191,10 @@ def main() -> None:
         # over the array bytes, not the .npz file: the zip container stores write timestamps
         "content_sha256": content_hash(arrays),
     }
-    (out / f"{args.name}_metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    meta_path.with_suffix(".json.part").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    meta_path.with_suffix(".json.part").replace(meta_path)
     save_previews(out / f"{args.name}_preview", x_all, man, classes)
 
-    short = {g: r["shortfall"] for g, r in reports.items() if r["shortfall"]}
     log(f"saved {npz_path.name}: " + ", ".join(f"{s}={len(arrays[f'x_{s}'])}" for s in SPLITS))
     log(f"content_sha256 {meta['content_sha256']}")
     log("SHORTFALL: " + json.dumps(short) if short else "all classes full")

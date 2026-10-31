@@ -34,6 +34,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--config", type=Path, default=ROOT / "configs" / "search.yaml", help="before calibration")
+    ap.add_argument("--mem-cap", type=float, default=20.0, help="GB of GPU memory for PyTorch (part of the cache "
+                    "key; the same value on every resume)")
     args = ap.parse_args()
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
@@ -65,9 +67,10 @@ def main():
     base = yaml.safe_load((cfg_path if cfg_path.exists() else args.config).read_text(encoding="utf-8"))
     epochs = [p["epochs"] for p in base["phases"]]
     gen0 = [out / f"gen0_{e}ep" for e in epochs]
-    run(f"gen0_{epochs[0]}ep", "scripts/train_random.py", "--n", base["n0"], "--epochs", epochs[0], "--out", gen0[0])
+    cap = ("--mem-cap", args.mem_cap)
+    run(f"gen0_{epochs[0]}ep", "scripts/train_random.py", "--n", base["n0"], "--epochs", epochs[0], "--out", gen0[0], *cap)
     for e, d in zip(epochs[1:], gen0[1:]):
-        run(f"gen0_{e}ep", "scripts/train_random.py", "--epochs", e, "--like", gen0[0], "--out", d)
+        run(f"gen0_{e}ep", "scripts/train_random.py", "--epochs", e, "--like", gen0[0], "--out", d, *cap)
 
     if not cfg_path.exists():  # written once: the search keeps the config it started with
         for d in gen0:
@@ -83,7 +86,7 @@ def main():
         for d in gen0:
             run(f"analyze_{d.name}", "scripts/analyze_gen0.py", d, base["k"], required=False)
 
-    run("search", "scripts/run_search.py", "--out", out / "search", "--config", cfg_path, "--gen0", *gen0)
+    run("search", "scripts/run_search.py", "--out", out / "search", "--config", cfg_path, "--gen0", *gen0, *cap)
     log("done")
 
 

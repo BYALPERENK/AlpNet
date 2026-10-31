@@ -1,6 +1,6 @@
 # Val vs test after the search (runs\main_20261024\search)
 
-The test scores were sealed during the search (one training per network, seed 0, the search recipe; the checkpoint is the best val macro-F1 epoch). Nothing was chosen by them. Differences below ~1 point between single trainings are seed noise.
+The test scores were sealed during the search (one training per network, seed 0, the search recipe; the checkpoint is the best val macro-F1 epoch). Nothing was chosen by them. Each score is one training, so small differences between two networks are not a ranking.
 
 ## 20 epochs (560 networks)
 

@@ -44,6 +44,15 @@ SEED = 0  # every candidate trains with the same seed
 DATASET = "alpnet15_v1"
 
 
+def set_mem_cap(gb: float):
+    """Cap PyTorch's GPU memory at `gb` GB. The cap is in the cache key (which networks run out of memory depends
+    on it), so a GPU with less memory needs a smaller --mem-cap, and that is another search."""
+    total = torch.cuda.get_device_properties(0).total_memory
+    if gb * 1e9 > total:
+        raise SystemExit(f"--mem-cap {gb:g} GB is more than this GPU has ({total / 1e9:.1f} GB): pass a smaller one")
+    torch.cuda.set_per_process_memory_fraction(gb * 1e9 / total)
+
+
 def search_key(recipe: Recipe, mem_cap: float = MEM_CAP) -> dict:
     """The cache key of a training by run_one (ga.cache_key)."""
     return cache_key(dataclasses.asdict(recipe), dataset_id(DATASET), SEED, DECODER_VERSION, mem_cap / 1e9)
@@ -138,14 +147,16 @@ def main():
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--like", type=Path, default=None,
                     help="train exactly the networks of another train_random.py run (its idx), instead of new draws")
+    ap.add_argument("--mem-cap", type=float, default=MEM_CAP / 1e9, help="GB (less on a GPU with less memory)")
     args = ap.parse_args()
 
-    torch.cuda.set_per_process_memory_fraction(MEM_CAP / torch.cuda.get_device_properties(0).total_memory)
+    set_mem_cap(args.mem_cap)
+    cap = args.mem_cap * 1e9
     splits = load_splits(DATASET)
     recipe = dataclasses.replace(SEARCH_RECIPE, epochs=args.epochs)
     if args.like:  # the same networks with another epoch count (generation 0 of every phase)
         like = [r for r in read_jsonl(args.like / "results.jsonl", repair=False) if not is_error(r)]
-        if bad := [r for r in like if r["key"] != search_key(recipe)]:
+        if bad := [r for r in like if r["key"] != search_key(recipe, cap)]:
             raise SystemExit(f"{args.like}: {len(bad)} candidates were trained with another decoder / recipe / dataset")
         todo, n = ((r["idx"], r["genotype"], decode(r["genotype"])) for r in like), len(like)
     else:
@@ -154,9 +165,9 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     results = out / "results.jsonl"
     rows = read_jsonl(results)  # a last line cut by a crash is dropped
-    if bad := [r for r in rows if r.get("key") != search_key(recipe) or r.get("epochs") != args.epochs]:
+    if bad := [r for r in rows if r.get("key") != search_key(recipe, cap) or r.get("epochs") != args.epochs]:
         raise SystemExit(f"{out}: {len(bad)} candidates were trained with another decoder / recipe / dataset / "
-                         "epoch count; use a new --out")
+                         "memory cap / epoch count; use a new --out")
     if retry := [r for r in rows if is_error(r)]:  # failed with an error, not by the network: trained again
         rows = [r for r in rows if not is_error(r)]
         write_atomic(results, "".join(json.dumps(r) + "\n" for r in rows))
@@ -171,7 +182,7 @@ def main():
             break
         if ph.hash in done:
             continue
-        r = run_one(idx, g, ph, splits, recipe, out)
+        r = run_one(idx, g, ph, splits, recipe, out, mem_cap=cap)
         append_jsonl(results, r)
         done[ph.hash] = r  # a network drawn again later in this run is not trained twice
         trained += r["status"] == "completed"

@@ -5,6 +5,7 @@
 
 import itertools
 import sys
+from unittest import SkipTest
 from pathlib import Path
 
 import torch
@@ -103,9 +104,13 @@ def test_head():
         assert run(Head(pool, CIN, 4, 4, n_fc, 64, "relu"), x).shape == (2, 15)
 
 
-def test_cuda_bf16_channels_last():
+def need_gpu():
     if not torch.cuda.is_available():
-        return
+        raise SkipTest("needs a CUDA GPU")  # pytest reports it as skipped
+
+
+def test_cuda_bf16_channels_last():
+    need_gpu()
     x = torch.randn(4, CIN, H, H, device="cuda").to(memory_format=torch.channels_last)
     for kind, conn, ds in itertools.product(BODIES, ("none", "add", "concat"), DOWNSAMPLES):
         m, c = make_block(conn, kind, CIN, WIDTH, k=3, norm="ln", se=True, growth=GROWTH)
@@ -119,6 +124,9 @@ def test_cuda_bf16_channels_last():
 if __name__ == "__main__":
     tests = [f for name, f in sorted(globals().items()) if name.startswith("test_")]
     for t in tests:
-        t()
-        print(f"ok  {t.__name__}")
-    print(f"{len(tests)} tests passed")
+        try:
+            t()
+            print(f"ok  {t.__name__}")
+        except SkipTest as e:
+            print(f"skipped  {t.__name__}: {e}")
+    print(f"{len(tests)} tests run")

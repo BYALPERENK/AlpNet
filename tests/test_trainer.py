@@ -1,4 +1,4 @@
-"""Trainer tests (needs the GPU and the built dataset). Runs with pytest or directly:
+"""Trainer tests (need the GPU and the built dataset, else skipped). Runs with pytest or directly:
 
     python tests/test_trainer.py
 """
@@ -6,6 +6,7 @@
 import json
 import sys
 import tempfile
+from unittest import SkipTest
 from functools import cache
 from pathlib import Path
 
@@ -13,11 +14,18 @@ import torch
 import torch.nn as nn
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from alpnet.data.loader import load_splits  # noqa: E402
+from alpnet.data.loader import PROCESSED, load_splits  # noqa: E402
 from alpnet.train.stopping import MinF1, Stop  # noqa: E402
 from alpnet.train.trainer import Recipe, seed_everything, train  # noqa: E402
 
 splits = cache(lambda: load_splits("alpnet15_v1"))
+
+
+def need_gpu_and_data():
+    if not torch.cuda.is_available():
+        raise SkipTest("needs a CUDA GPU")  # pytest reports it as skipped
+    if not (PROCESSED / "alpnet15_v1_metadata.json").exists():
+        raise SkipTest("needs the built dataset (scripts/build_dataset.py)")
 
 
 class LinearNet(nn.Module):
@@ -32,8 +40,7 @@ class LinearNet(nn.Module):
 
 def test_nan_run_fails_cleanly():
     """A NaN loss in the first epoch ends the run with a failed status instead of an exception."""
-    if not torch.cuda.is_available():
-        return
+    need_gpu_and_data()
     with tempfile.TemporaryDirectory() as d:
         seed_everything(0)
         s = train(LinearNet(float("nan")), splits(), Recipe(epochs=2), 0, Path(d), log=lambda msg: None)
@@ -44,8 +51,7 @@ def test_nan_run_fails_cleanly():
 
 def test_test_at_end_matches_every_epoch():
     """Search mode (test once at the end with the checkpoint weights) reports the same scores; fused AdamW runs."""
-    if not torch.cuda.is_available():
-        return
+    need_gpu_and_data()
     out = []
     for recipe in (Recipe(epochs=3), Recipe(epochs=3, test_every_epoch=False), Recipe(epochs=3, fused=True)):
         with tempfile.TemporaryDirectory() as d:
@@ -81,8 +87,7 @@ def test_test_at_end_matches_every_epoch():
 
 def test_save_weights():
     """save_weights keeps the checkpoint epoch's weights as model.pt (scripts/inspect_errors.py)."""
-    if not torch.cuda.is_available():
-        return
+    need_gpu_and_data()
     with tempfile.TemporaryDirectory() as d:
         seed_everything(0)
         train(LinearNet(), splits(), Recipe(epochs=2), 0, Path(d), log=lambda msg: None, save_weights=True)
@@ -94,8 +99,7 @@ def test_save_weights():
 
 def test_stop_rules():
     """A prune ends the run with status "pruned" and its partial score; a non-prune stop stays "completed"."""
-    if not torch.cuda.is_available():
-        return
+    need_gpu_and_data()
     unreachable = MinF1("unreachable", {2: 2.0})  # F1 is at most 1: cut at epoch 2
     finished = lambda rows: Stop("done early", prune=False) if len(rows) == 2 else None  # noqa: E731
     for rule, status in ((unreachable, "pruned: unreachable at epoch 2"), (finished, "completed")):
@@ -111,6 +115,9 @@ def test_stop_rules():
 if __name__ == "__main__":
     tests = [f for name, f in sorted(globals().items()) if name.startswith("test_")]
     for t in tests:
-        t()
-        print(f"ok  {t.__name__}")
-    print(f"{len(tests)} tests passed")
+        try:
+            t()
+            print(f"ok  {t.__name__}")
+        except SkipTest as e:
+            print(f"skipped  {t.__name__}: {e}")
+    print(f"{len(tests)} tests run")

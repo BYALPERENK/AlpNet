@@ -123,8 +123,9 @@ def main() -> None:
     failed = [i for i in picked if not (IMG_DIR / f"{i}.jpg").exists()]
     if failed:
         (OI / "failed_images.txt").write_text("\n".join(failed))
-        print(f"{len(failed)} images failed -> failed_images.txt", flush=True)
+        print(f"{len(failed)} images failed -> failed_images.txt (run again to retry them)", flush=True)
     print("done", flush=True)
+    sys.exit(1 if failed else 0)
 
 
 if __name__ == "__main__":

@@ -36,56 +36,56 @@ Children not completed: pruned: reach_elite 30, pruned: percentile 5, pruned: no
 
 ![progress](progress.png)
 
-| # | fitness | val F1 | params | MACs | gen | origin | architecture |
-|---|---|---|---|---|---|---|---|
-| 1 | 86.67 | 87.17 | 0.62M | 0.507G | 8 | crossover | s64 mbconv/add d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 ln | s4 bottleneck/concat d2 w24 k1 bn |
-| 2 | 86.64 | 87.17 | 0.67M | 0.507G | 10 | mutation | s64 mbconv/add d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 ln | s4 bottleneck/concat d2 w64 k1 bn |
-| 3 | 86.59 | 87.44 | 1.57M | 0.456G | 9 | crossover | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d2 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 bn |
-| 4 | 86.57 | 87.78 | 2.42M | 0.684G | 10 | crossover | s64 double_conv/concat d6 w128 k1 bn | s32 double_conv/add d2 w32 k3 bn | s16 conv/add d4 w256 k3 bn | s8 bottleneck/concat d6 w96 k7 bn | s4 dw_sep/concat d3 w192 k1 none |
-| 5 | 86.55 | 86.94 | 0.90M | 0.271G | 9 | crossover | s64 double_conv/add d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
-| 6 | 86.54 | 87.82 | 2.03M | 0.953G | 10 | crossover | s64 mbconv/concat d3 w96 k3 bn | s16 conv/none d4 w96 k7 bn | s4 bottleneck/concat d2 w24 k1 bn |
-| 7 | 86.47 | 87.26 | 1.53M | 0.405G | 9 | crossover | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w256 k7 bn | s4 conv/none d6 w96 k1 none |
-| 8 | 86.46 | 87.13 | 1.21M | 0.393G | 6 | mutation | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d4 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
-| 9 | 86.44 | 86.86 | 0.90M | 0.298G | 9 | mutation | s64 double_conv/add d1 w96 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 dw_sep/none d4 w256 k3 ln | s8 dw_sep/concat d6 w96 k7 bn | s4 double_conv/concat d3 w192 k1 none |
-| 10 | 86.43 | 87.75 | 2.89M | 0.727G | 8 | crossover | s64 double_conv/concat d1 w96 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 conv/none d4 w256 k3 bn | s8 dw_sep/concat d6 w96 k7 bn | s4 double_conv/concat d3 w192 k1 none |
-| 11 | 86.34 | 86.44 | 0.46M | 0.278G | 10 | crossover | s64 mbconv/concat d1 w128 k3 bn | s32 bottleneck/add d2 w128 k3 bn | s16 conv/concat d4 w96 k3 bn | s8 convnext/concat d4 w96 k5 bn | s4 double_conv/concat d3 w192 k1 none |
-| 12 | 86.30 | 86.83 | 1.13M | 0.302G | 9 | mutation | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/add d2 w128 k3 bn | s16 double_conv/concat d4 w256 k3 ln | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 none |
-| 13 | 86.30 | 86.95 | 1.30M | 0.348G | 8 | crossover | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d5 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k1 ln |
-| 14 | 86.28 | 86.78 | 0.86M | 0.370G | 5 | crossover | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
-| 15 | 86.24 | 86.87 | 1.21M | 0.354G | 8 | crossover | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/add d2 w128 k3 bn | s16 double_conv/concat d4 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 none |
-| 16 | 86.23 | 87.23 | 1.45M | 0.690G | 7 | mutation | s64 conv/concat d5 w128 k1 bn | s32 double_conv/add d6 w32 k3 bn | s16 convnext/add d4 w256 k3 bn | s8 bottleneck/concat d6 w64 k1 bn | s4 dw_sep/concat d5 w96 k1 ln |
-| 17 | 86.23 | 86.91 | 0.80M | 0.608G | 8 | mutation | s64 mbconv/concat d3 w96 k3 bn | s32 bottleneck/concat d6 w128 k7 bn | s16 conv/concat d4 w96 k3 bn | s4 double_conv/concat d2 w192 k1 none |
-| 18 | 86.09 | 86.61 | 0.84M | 0.391G | 10 | mutation | s64 mbconv/add d1 w256 k1 none | s32 bottleneck/add d1 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
-| 19 | 86.05 | 86.73 | 1.25M | 0.382G | 7 | crossover | s64 convnext/concat d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 none | s8 convnext/concat d6 w384 k7 bn | s4 bottleneck/add d2 w96 k1 bn |
-| 20 | 86.03 | 86.81 | 1.41M | 0.432G | 10 | crossover | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d5 w256 k7 bn | s4 conv/none d6 w96 k1 none |
+| # | fitness | val F1 | params | MACs | gen | origin | hash | architecture |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 86.67 | 87.17 | 0.62M | 0.507G | 8 | crossover | fc056a845ec7e356 | s64 mbconv/add d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 ln | s4 bottleneck/concat d2 w24 k1 bn |
+| 2 | 86.64 | 87.17 | 0.67M | 0.507G | 10 | mutation | d4078a4cdc6350a4 | s64 mbconv/add d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 ln | s4 bottleneck/concat d2 w64 k1 bn |
+| 3 | 86.59 | 87.44 | 1.57M | 0.456G | 9 | crossover | c8f000453741a7eb | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d2 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 bn |
+| 4 | 86.57 | 87.78 | 2.42M | 0.684G | 10 | crossover | 9c8ea6f03a6c8ce6 | s64 double_conv/concat d6 w128 k1 bn | s32 double_conv/add d2 w32 k3 bn | s16 conv/add d4 w256 k3 bn | s8 bottleneck/concat d6 w96 k7 bn | s4 dw_sep/concat d3 w192 k1 none |
+| 5 | 86.55 | 86.94 | 0.90M | 0.271G | 9 | crossover | e1f23da9dd34f872 | s64 double_conv/add d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
+| 6 | 86.54 | 87.82 | 2.03M | 0.953G | 10 | crossover | 3d7292ccf24841c0 | s64 mbconv/concat d3 w96 k3 bn | s16 conv/none d4 w96 k7 bn | s4 bottleneck/concat d2 w24 k1 bn |
+| 7 | 86.47 | 87.26 | 1.53M | 0.405G | 9 | crossover | 6b173994d541837b | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w256 k7 bn | s4 conv/none d6 w96 k1 none |
+| 8 | 86.46 | 87.13 | 1.21M | 0.393G | 6 | mutation | 7cf7e6d95d62b14e | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d4 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
+| 9 | 86.44 | 86.86 | 0.90M | 0.298G | 9 | mutation | c320ebbd98f04c64 | s64 double_conv/add d1 w96 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 dw_sep/none d4 w256 k3 ln | s8 dw_sep/concat d6 w96 k7 bn | s4 double_conv/concat d3 w192 k1 none |
+| 10 | 86.43 | 87.75 | 2.89M | 0.727G | 8 | crossover | 2dc7a2f7c488dfdd | s64 double_conv/concat d1 w96 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 conv/none d4 w256 k3 bn | s8 dw_sep/concat d6 w96 k7 bn | s4 double_conv/concat d3 w192 k1 none |
+| 11 | 86.34 | 86.44 | 0.46M | 0.278G | 10 | crossover | 389522bac28f050e | s64 mbconv/concat d1 w128 k3 bn | s32 bottleneck/add d2 w128 k3 bn | s16 conv/concat d4 w96 k3 bn | s8 convnext/concat d4 w96 k5 bn | s4 double_conv/concat d3 w192 k1 none |
+| 12 | 86.30 | 86.83 | 1.13M | 0.302G | 9 | mutation | 8740f0882d006a99 | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/add d2 w128 k3 bn | s16 double_conv/concat d4 w256 k3 ln | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 none |
+| 13 | 86.30 | 86.95 | 1.30M | 0.348G | 8 | crossover | de56120802e9bda0 | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d5 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k1 ln |
+| 14 | 86.28 | 86.78 | 0.86M | 0.370G | 5 | crossover | 54fb63675178ebb8 | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
+| 15 | 86.24 | 86.87 | 1.21M | 0.354G | 8 | crossover | d03cda7ed23ed38a | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/add d2 w128 k3 bn | s16 double_conv/concat d4 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 none |
+| 16 | 86.23 | 87.23 | 1.45M | 0.690G | 7 | mutation | df1d4ee97d0ad870 | s64 conv/concat d5 w128 k1 bn | s32 double_conv/add d6 w32 k3 bn | s16 convnext/add d4 w256 k3 bn | s8 bottleneck/concat d6 w64 k1 bn | s4 dw_sep/concat d5 w96 k1 ln |
+| 17 | 86.23 | 86.91 | 0.80M | 0.608G | 8 | mutation | c509e8436e0787bc | s64 mbconv/concat d3 w96 k3 bn | s32 bottleneck/concat d6 w128 k7 bn | s16 conv/concat d4 w96 k3 bn | s4 double_conv/concat d2 w192 k1 none |
+| 18 | 86.09 | 86.61 | 0.84M | 0.391G | 10 | mutation | fe5869570260c4c0 | s64 mbconv/add d1 w256 k1 none | s32 bottleneck/add d1 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
+| 19 | 86.05 | 86.73 | 1.25M | 0.382G | 7 | crossover | 9f0843207deb5a71 | s64 convnext/concat d1 w128 k5 bn | s16 double_conv/none d2 w96 k3 none | s8 convnext/concat d6 w384 k7 bn | s4 bottleneck/add d2 w96 k1 bn |
+| 20 | 86.03 | 86.81 | 1.41M | 0.432G | 10 | crossover | 09ee9a3f444d090b | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d5 w256 k7 bn | s4 conv/none d6 w96 k1 none |
 
 Spread of the best 20: 0.65 points; neighbouring gaps among the best 30: median 0.02.
 
 ### Val F1 / MACs Pareto front (21 networks: none is both cheaper and better)
 
-| MACs | params | val F1 | fitness | gen | architecture |
-|---|---|---|---|---|---|
-| 0.001G | 0.09M | 63.17 | 65.16 | 0 | s8 mbconv/add d2 w24 k7 none |
-| 0.005G | 0.06M | 71.44 | 73.43 | 0 | s8 mbconv/add d6 w16 k7 none |
-| 0.005G | 0.62M | 79.45 | 80.65 | 1 | s8 dw_sep/concat d3 w32 k1 bn |
-| 0.009G | 0.14M | 79.75 | 81.60 | 2 | s32 conv/none d2 w24 k1 none | s16 mbconv/concat d1 w96 k5 bn | s8 dw_sep/concat d4 w64 k5 none |
-| 0.023G | 0.18M | 80.52 | 81.88 | 2 | s32 bottleneck/concat d1 w192 k1 bn | s8 bottleneck/none d1 w128 k5 none |
-| 0.041G | 0.92M | 80.83 | 81.25 | 1 | s16 mbconv/add d2 w64 k5 none | s8 bottleneck/add d6 w128 k7 bn | s4 mbconv/concat d4 w24 k1 ln |
-| 0.042G | 0.37M | 82.01 | 82.82 | 3 | s64 convnext/none d1 w32 k5 ln | s16 conv/concat d1 w96 k3 ln | s8 bottleneck/add d4 w192 k1 bn |
-| 0.052G | 0.34M | 83.22 | 83.97 | 6 | s64 bottleneck/concat d1 w32 k7 bn | s32 convnext/add d1 w48 k3 bn | s16 dw_sep/none d2 w96 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k3 none |
-| 0.054G | 0.38M | 83.69 | 84.37 | 8 | s64 double_conv/concat d1 w32 k1 bn | s16 convnext/concat d4 w96 k3 bn | s8 convnext/concat d6 w192 k7 bn |
-| 0.075G | 1.32M | 83.82 | 83.82 | 5 | s64 mbconv/none d1 w48 k5 bn | s16 bottleneck/none d4 w96 k3 none | s8 convnext/concat d6 w64 k1 bn | s4 double_conv/add d2 w64 k7 ln |
-| 0.078G | 0.50M | 84.95 | 85.35 | 7 | s64 double_conv/concat d1 w32 k1 bn | s16 double_conv/concat d4 w96 k3 bn | s8 convnext/concat d6 w192 k7 bn | s4 double_conv/add d2 w192 k1 bn |
-| 0.108G | 0.49M | 85.58 | 85.86 | 8 | s64 double_conv/add d1 w48 k1 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
-| 0.182G | 0.77M | 85.62 | 85.47 | 10 | s64 dw_sep/add d1 w128 k5 bn | s16 double_conv/concat d4 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 bottleneck/add d1 w24 k1 none |
-| 0.226G | 2.69M | 86.30 | 85.52 | 9 | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/concat d2 w128 k3 none | s16 double_conv/concat d4 w256 k1 bn | s8 convnext/concat d1 w192 k7 ln | s4 double_conv/add d6 w192 k1 bn |
-| 0.271G | 0.90M | 86.94 | 86.55 | 9 | s64 double_conv/add d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
-| 0.348G | 1.30M | 86.95 | 86.30 | 8 | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d5 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k1 ln |
-| 0.393G | 1.21M | 87.13 | 86.46 | 6 | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d4 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
-| 0.405G | 1.53M | 87.26 | 86.47 | 9 | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w256 k7 bn | s4 conv/none d6 w96 k1 none |
-| 0.456G | 1.57M | 87.44 | 86.59 | 9 | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d2 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 bn |
-| 0.684G | 2.42M | 87.78 | 86.57 | 10 | s64 double_conv/concat d6 w128 k1 bn | s32 double_conv/add d2 w32 k3 bn | s16 conv/add d4 w256 k3 bn | s8 bottleneck/concat d6 w96 k7 bn | s4 dw_sep/concat d3 w192 k1 none |
-| 0.953G | 2.03M | 87.82 | 86.54 | 10 | s64 mbconv/concat d3 w96 k3 bn | s16 conv/none d4 w96 k7 bn | s4 bottleneck/concat d2 w24 k1 bn |
+| MACs | params | val F1 | fitness | gen | hash | architecture |
+|---|---|---|---|---|---|---|
+| 0.001G | 0.09M | 63.17 | 65.16 | 0 | 0721609ae803649e | s8 mbconv/add d2 w24 k7 none |
+| 0.005G | 0.06M | 71.44 | 73.43 | 0 | 4f3571d980c9a3fb | s8 mbconv/add d6 w16 k7 none |
+| 0.005G | 0.62M | 79.45 | 80.65 | 1 | 11e7712aa7edd554 | s8 dw_sep/concat d3 w32 k1 bn |
+| 0.009G | 0.14M | 79.75 | 81.60 | 2 | 5ec7b956ab0d73fd | s32 conv/none d2 w24 k1 none | s16 mbconv/concat d1 w96 k5 bn | s8 dw_sep/concat d4 w64 k5 none |
+| 0.023G | 0.18M | 80.52 | 81.88 | 2 | c35da6d1ce83fe37 | s32 bottleneck/concat d1 w192 k1 bn | s8 bottleneck/none d1 w128 k5 none |
+| 0.041G | 0.92M | 80.83 | 81.25 | 1 | 06a94f19fcbb6d23 | s16 mbconv/add d2 w64 k5 none | s8 bottleneck/add d6 w128 k7 bn | s4 mbconv/concat d4 w24 k1 ln |
+| 0.042G | 0.37M | 82.01 | 82.82 | 3 | 366b58c794620930 | s64 convnext/none d1 w32 k5 ln | s16 conv/concat d1 w96 k3 ln | s8 bottleneck/add d4 w192 k1 bn |
+| 0.052G | 0.34M | 83.22 | 83.97 | 6 | 90d997bbcbd2d577 | s64 bottleneck/concat d1 w32 k7 bn | s32 convnext/add d1 w48 k3 bn | s16 dw_sep/none d2 w96 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k3 none |
+| 0.054G | 0.38M | 83.69 | 84.37 | 8 | b2ce33e662149111 | s64 double_conv/concat d1 w32 k1 bn | s16 convnext/concat d4 w96 k3 bn | s8 convnext/concat d6 w192 k7 bn |
+| 0.075G | 1.32M | 83.82 | 83.82 | 5 | d9f817a9ee8c9338 | s64 mbconv/none d1 w48 k5 bn | s16 bottleneck/none d4 w96 k3 none | s8 convnext/concat d6 w64 k1 bn | s4 double_conv/add d2 w64 k7 ln |
+| 0.078G | 0.50M | 84.95 | 85.35 | 7 | 0e79a6bedfb94641 | s64 double_conv/concat d1 w32 k1 bn | s16 double_conv/concat d4 w96 k3 bn | s8 convnext/concat d6 w192 k7 bn | s4 double_conv/add d2 w192 k1 bn |
+| 0.108G | 0.49M | 85.58 | 85.86 | 8 | c8e9c1b012bbccea | s64 double_conv/add d1 w48 k1 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
+| 0.182G | 0.77M | 85.62 | 85.47 | 10 | 9ccd3862535142b2 | s64 dw_sep/add d1 w128 k5 bn | s16 double_conv/concat d4 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 bottleneck/add d1 w24 k1 none |
+| 0.226G | 2.69M | 86.30 | 85.52 | 9 | 366f69ae63b4b2b7 | s64 double_conv/add d1 w128 k1 bn | s32 bottleneck/concat d2 w128 k3 none | s16 double_conv/concat d4 w256 k1 bn | s8 convnext/concat d1 w192 k7 ln | s4 double_conv/add d6 w192 k1 bn |
+| 0.271G | 0.90M | 86.94 | 86.55 | 9 | e1f23da9dd34f872 | s64 double_conv/add d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 double_conv/concat d2 w256 k3 bn | s8 convnext/concat d6 w96 k7 bn | s4 double_conv/add d3 w192 k1 ln |
+| 0.348G | 1.30M | 86.95 | 86.30 | 8 | de56120802e9bda0 | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d5 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w48 k1 ln |
+| 0.393G | 1.21M | 87.13 | 86.46 | 6 | 7cf7e6d95d62b14e | s64 double_conv/add d1 w128 k1 bn | s32 convnext/add d2 w128 k3 bn | s16 convnext/concat d2 w256 k3 none | s8 bottleneck/concat d4 w96 k7 bn | s4 double_conv/add d3 w96 k1 none |
+| 0.405G | 1.53M | 87.26 | 86.47 | 9 | 6b173994d541837b | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/add d6 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w256 k7 bn | s4 conv/none d6 w96 k1 none |
+| 0.456G | 1.57M | 87.44 | 86.59 | 9 | c8f000453741a7eb | s64 double_conv/concat d1 w128 k1 bn | s32 dw_sep/concat d2 w128 k3 bn | s16 conv/none d2 w256 k3 none | s8 bottleneck/concat d6 w96 k7 bn | s4 double_conv/add d3 w96 k1 bn |
+| 0.684G | 2.42M | 87.78 | 86.57 | 10 | 9c8ea6f03a6c8ce6 | s64 double_conv/concat d6 w128 k1 bn | s32 double_conv/add d2 w32 k3 bn | s16 conv/add d4 w256 k3 bn | s8 bottleneck/concat d6 w96 k7 bn | s4 dw_sep/concat d3 w192 k1 none |
+| 0.953G | 2.03M | 87.82 | 86.54 | 10 | 3d7292ccf24841c0 | s64 mbconv/concat d3 w96 k3 bn | s16 conv/none d4 w96 k7 bn | s4 bottleneck/concat d2 w24 k1 bn |
 
 ![pareto](pareto.png)
 

@@ -13,7 +13,8 @@ Reads the files while the search writes them (a line being written is left out).
      the training noise of both and the regression to the mean of the selected parent are in it;
 6. per-class val F1 of the best networks, the stage motifs and stage layouts of the best.
 Writes analysis.md and the charts into --out (default <search>/analysis/). The Pareto chart also draws the
-front of the other epoch count, if there is one.
+front of the other epoch count, if there is one. Also runs on the published copy (results/search: results.jsonl.gz,
+generations.jsonl, ga_state.json); without ga_state.json the origins of the last population are left out.
 
     python scripts/analyze_search.py runs/main_20261024/search [--epochs 20] [--top 30] [--out DIR]
 """
@@ -164,7 +165,8 @@ def main():
 
     recs = read_jsonl(args.search / "results.jsonl", repair=False)
     gens = list({g["generation"]: g for g in read_jsonl(args.search / "generations.jsonl", repair=False)}.values())
-    state = json.loads((args.search / "ga_state.json").read_text(encoding="utf-8"))
+    state_path = args.search / "ga_state.json"
+    state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else None
     at = [r for r in recs if r["epochs"] == E]
     ok = [r for r in at if r["status"] == "completed" and r.get("fitness") is not None]
     g0 = [r for r in ok if r["generation"] == 0]
@@ -208,10 +210,27 @@ def main():
     for r in ok:
         ax.scatter(r["generation"] + rng.uniform(-0.25, 0.25), r["fitness"], s=10, color=gen_color(r["generation"], last),
                    alpha=0.55, linewidths=0)
+    # the lines only where the population was scored with E epochs; generation 0 (trained with every epoch
+    # count) from its own E-epoch networks, so the lines and the dots are the same scores
+    line = {g["generation"]: g for g in gens if g["epochs"] == E}
+    if g0 and 0 not in line:
+        fit0 = [r["fitness"] for r in g0]
+        line[0] = {"best_fitness": max(fit0), "elite_mean_fitness": None, "median_fitness": float(np.median(fit0))}
     for key, col, lab in (("best_fitness", BLUE, "best"), ("elite_mean_fitness", ORANGE, "elite mean"),
                           ("median_fitness", AQUA, "population median")):
-        pts = [(g["generation"], g[key]) for g in gens if g[key] is not None]
-        ax.plot(*zip(*pts), color=col, linewidth=2, marker="o", markersize=4, label=lab)
+        pts = [(n, g[key]) for n, g in sorted(line.items()) if g[key] is not None]
+        runs = [[p] for p in pts[:1]]
+        for p in pts[1:]:  # no line across the generations left out
+            runs[-1].append(p) if p[0] == runs[-1][-1][0] + 1 else runs.append([p])
+        for i, run in enumerate(runs):
+            ax.plot(*zip(*run), color=col, linewidth=2, marker="o", markersize=4, label=None if i else lab)
+    other = sorted((g["generation"], g["epochs"]) for g in gens if g["epochs"] != E
+                   and 0 < g["generation"] <= max(r["generation"] for r in ok))
+    if other:  # generations scored with the other epoch count, inside the chart: no dots, no lines
+        a, b = other[0][0], other[-1][0]
+        ax.axvspan(a - 0.5, b + 0.5, color=MUTED, alpha=0.12, linewidth=0)
+        ax.text((a + b) / 2, 0.04, f"generations {a}–{b}: {other[0][1]} epochs, not shown",
+                transform=ax.get_xaxis_transform(), ha="center", fontsize=8, color=INK2)
     ax.set_ylim(max(60, min(r["fitness"] for r in ok) - 1), None)
     top_gen = max(r["generation"] for r in ok)  # the running generation shows its finished networks
     ax.set_xticks(range(top_gen + 1))
@@ -225,19 +244,21 @@ def main():
     # 2. leaderboard, Pareto front
     best = sorted(ok, key=lambda r: -r["fitness"])
     L += [f"## 2. The best networks ({E} epochs)", "", "![progress](progress.png)", "",
-          "| # | fitness | val F1 | params | MACs | gen | origin | architecture |", "|---|---|---|---|---|---|---|---|"]
+          "| # | fitness | val F1 | params | MACs | gen | origin | hash | architecture |", "|---|---|---|---|---|---|---|---|---|"]
     for i, r in enumerate(best[:20], 1):
         L.append(f"| {i} | {r['fitness']:.2f} | {f1(r):.2f} | {r['params'] / 1e6:.2f}M | {r['macs'] / 1e9:.3f}G | "
-                 f"{r['generation']} | {r['origin']} | {r['arch']} |")
-    gaps = np.abs(np.diff([r["fitness"] for r in best[:TOP]]))
-    L += ["", f"Spread of the best 20: {best[0]['fitness'] - best[19]['fitness']:.2f} points; neighbouring gaps "
-          f"among the best {TOP}: median {np.median(gaps):.2f}.", ""]
+                 f"{r['generation']} | {r['origin']} | {r['hash']} | {r['arch']} |")
+    if len(best) > 1:
+        gaps = np.abs(np.diff([r["fitness"] for r in best[:TOP]]))
+        n = min(20, len(best))
+        L += ["", f"Spread of the best {n}: {best[0]['fitness'] - best[n - 1]['fitness']:.2f} points; neighbouring "
+              f"gaps among the best {min(TOP, len(best))}: median {np.median(gaps):.2f}.", ""]
     front = pareto(ok)
     L += [f"### Val F1 / MACs Pareto front ({len(front)} networks: none is both cheaper and better)", "",
-          "| MACs | params | val F1 | fitness | gen | architecture |", "|---|---|---|---|---|---|"]
+          "| MACs | params | val F1 | fitness | gen | hash | architecture |", "|---|---|---|---|---|---|---|"]
     for r in front:
         L.append(f"| {r['macs'] / 1e9:.3f}G | {r['params'] / 1e6:.2f}M | {f1(r):.2f} | {r['fitness']:.2f} | "
-                 f"{r['generation']} | {r['arch']} |")
+                 f"{r['generation']} | {r['hash']} | {r['arch']} |")
     fig, ax = plt.subplots(figsize=(8, 4.6), facecolor=SURFACE)
     for r in sorted(ok, key=lambda r: r["generation"]):
         ax.scatter(r["macs"] / 1e9, f1(r), s=12, color=gen_color(r["generation"], last), alpha=0.6, linewidths=0)
@@ -278,10 +299,10 @@ def main():
                  f"{sum(reached)} ({100 * np.mean(reached):.0f}%) | "
                  f"{sum(c > max(p) for c, p in pf)} ({100 * np.mean([c > max(p) for c, p in pf]):.0f}%) | "
                  f"{np.median([c - np.mean(p) for c, p in pf]):+.2f} |")
-    pop = [by[p["hash"]] for p in state["population"] if p["hash"] in by]
-    L += ["", f"Origins of the current population ({len(pop)}): "
-          + ", ".join(f"{k} {v}" for k, v in Counter(r["origin"] for r in pop).most_common())
-          + f"; of the best 20 so far: " + ", ".join(f"{k} {v}" for k, v in Counter(r["origin"] for r in best[:20]).most_common())
+    pop = [by[p["hash"]] for p in state["population"] if p["hash"] in by] if state else []
+    L += ["", (f"Origins of the current population ({len(pop)}): "
+               + ", ".join(f"{k} {v}" for k, v in Counter(r["origin"] for r in pop).most_common()) + "; o"
+               if state else "O") + f"f the best 20 so far: " + ", ".join(f"{k} {v}" for k, v in Counter(r["origin"] for r in best[:20]).most_common())
           + f"; of the best {TOP}, by generation: "
           + ", ".join(f"{k}: {v}" for k, v in sorted(Counter(r["generation"] for r in best[:TOP]).items())), ""]
 
